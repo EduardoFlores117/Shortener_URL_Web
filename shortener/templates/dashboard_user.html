@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+    <div class="container mx-auto p-6 relative">
+        <!-- Barra superior -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-blue-400">Mis URLs Acortadas</h1>
+
+            <!-- Sección del usuario -->
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <span class="bg-gray-700 p-2 rounded-full text-white">👤</span>
+                    <span class="text-white">{{ request.user.email }}</span>
+                </div>
+                <a href="/auth/logout/" class="px-4 py-2 bg-red-500 rounded-lg text-white hover:bg-red-700">
+                    Cerrar Sesión
+                </a>
+            </div>
+        </div>
+
+        <!-- Formulario de acortamiento -->
+        <div class="mt-4 p-4 bg-gray-800 rounded-lg shadow-md">
+            <form id="shorten-form">
+                {% csrf_token %}
+                <label for="original_url" class="block mb-2 text-gray-300">Introduce la URL:</label>
+                <input type="url" name="original_url" id="original_url" required class="w-full p-2 text-black rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <button type="submit" class="w-full mt-3 px-4 py-2 bg-blue-500 rounded-lg text-white hover:bg-blue-700">
+                    Acortar URL
+                </button>
+            </form>
+        </div>
+
+        <!-- Nuevo: Formulario para subir archivo de URLs -->
+        <div class="mt-6 p-4 bg-gray-800 rounded-lg shadow-md">
+            <h2 class="text-xl font-bold text-white mb-4">Acortar URLs Masivamente</h2>
+            <form id="bulkUploadForm" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="file" id="fileInput" name="file" accept=".txt"
+                    class="w-full p-2 bg-gray-700 text-white rounded-lg">
+                <button type="submit" class="mt-3 px-4 py-2 bg-blue-500 rounded-lg text-white hover:bg-blue-700">
+                    Subir y Acortar
+                </button>
+            </form>
+            <div id="downloadLinkContainer" class="mt-4 hidden">
+                <a id="downloadLink" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-700">
+                    Descargar Archivo de URLs Acortadas
+                </a>
+            </div>
+        </div>
+        
+        <!-- Tabla de URLs -->
+        <div class="mt-6 p-4 bg-gray-800 rounded-lg shadow-md">
+            <table class="w-full border-collapse rounded-lg overflow-hidden">
+                <thead>
+                    <tr class="bg-gray-700 text-white text-left">
+                        <th class="p-3">ID</th>
+                        <th class="p-3">URL Original</th>
+                        <th class="p-3">URL Acortada</th>
+                        <th class="p-3">Visitas</th>
+                        <th class="p-3">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="urls-table">
+                    {% for url in page_obj %}
+                    <tr class="border-b border-gray-600 hover:bg-gray-700" id="url-row-{{ url.id }}">
+                        <td class="p-3">{{ url.id }}</td>
+                        <td class="p-3 truncate max-w-xs">{{ url.original_url }}</td>
+                        <td class="p-3">
+                            <a href="{{ url.get_short_url }}" target="_blank" class="text-blue-400 hover:underline">{{ url.get_short_url }}</a>
+                        </td>
+                        <td class="p-3">{{ url.views }}</td>
+                        <td class="p-3 flex space-x-2">
+                            <button onclick="copyToClipboard('{{ url.get_short_url }}')" class="text-gray-300 hover:text-white">📋</button>
+                            <button onclick="confirmDeleteUrl({{ url.id }})" class="text-red-500 hover:text-red-700">🗑️</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        {% if page_obj.has_other_pages %}
+            <div class="flex items-center justify-between mt-4">
+                {% if page_obj.has_previous %}
+                    <a href="?page=1" class="px-4 py-2 bg-blue-500 rounded-lg text-white hover:bg-blue-700">« Primera</a>
+                    <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-blue-500 rounded-lg text-white hover:bg-blue-700">⬅️ Anterior</a>
+                {% else %}
+                    <span class="px-4 py-2 text-gray-500">« Primera</span>
+                    <span class="px-4 py-2 text-gray-500">⬅️ Anterior</span>
+                {% endif %}
+
+                <span class="text-gray-300 text-lg font-semibold">
+                    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                </span>
+
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-blue-500 rounded-lg text-white hover:bg-blue-700">Siguiente ➡️</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}" class="px-4 py-2 bg-blue-500 rounded-lg text-white hover:bg-blue-700">Última »</a>
+                {% else %}
+                    <span class="px-4 py-2 text-gray-500">Siguiente ➡️</span>
+                    <span class="px-4 py-2 text-gray-500">Última »</span>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        document.getElementById("shorten-form").addEventListener("submit", function(event) {
+            event.preventDefault();
+            let formData = new FormData(this);
+        
+            fetch("/shorten/", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Respuesta de la API (Acortar una URL):", data); // 🔍 Verificar en consola
+        
+                if (data.error) {
+                    showNotification("error", data.error);
+                } else {
+                    updateTable(data.urls);  // ✅ Ahora usamos el array devuelto correctamente
+                    showNotification("success", "URL acortada exitosamente");
+                    document.getElementById("original_url").value = "";  // ✅ Limpiamos el input
+                }
+            });
+        });
+        
+        // ✅ Función para actualizar la tabla con las URLs acortadas
+        function updateTable(urls) {
+            let tableBody = document.getElementById("urls-table");
+        
+            urls.forEach(url => {
+                if (!url.id || !url.original_url || !url.short_url) {
+                    console.warn("Datos de URL inválidos:", url);
+                    return;
+                }
+        
+                let newRow = document.createElement("tr");
+                newRow.classList.add("border-b", "border-gray-600", "hover:bg-gray-700");
+                newRow.setAttribute("id", `url-row-${url.id}`);
+                newRow.innerHTML = `
+                    <td class="p-3">${url.id}</td>
+                    <td class="p-3 truncate max-w-xs">${url.original_url}</td>
+                    <td class="p-3">
+                        <a href="${url.short_url}" target="_blank" class="text-blue-400 hover:underline">${url.short_url}</a>
+                    </td>
+                    <td class="p-3">${url.views}</td>
+                    <td class="p-3 flex space-x-2">
+                        <button onclick="copyToClipboard('${url.short_url}')" class="text-gray-300 hover:text-white">📋</button>
+                        <button onclick="confirmDeleteUrl(${url.id})" class="text-red-500 hover:text-red-700">🗑️</button>
+                    </td>
+                `;
+                tableBody.prepend(newRow);  // 🔄 Agregar al inicio de la tabla
+            });
+        }
+        
+        // ✅ Subir y acortar URLs masivamente
+        document.getElementById("bulkUploadForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+        
+            const response = await fetch('/shorten/bulk/', {
+                method: 'POST',
+                body: formData
+            });
+        
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Datos recibidos de bulk shorten:", data); // 🔍 Verificar en consola
+        
+                // ✅ Actualizar la tabla con las nuevas URLs generadas
+                if (data.urls) {
+                    updateTable(data.urls);
+                }
+        
+                // ✅ Preparar la descarga sin redirigir
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = data.file_url;
+                downloadLink.download = "shortened_urls.txt"; // ⚡ Asegurar que se descargue el archivo
+                document.getElementById('downloadLinkContainer').classList.remove('hidden');
+        
+                showNotification("success", "Archivo procesado correctamente");
+            } else {
+                showNotification("error", "Hubo un error al procesar el archivo.");
+            }
+        });
+        
+        // ✅ Descargar archivo sin abrir otra página y actualizar la tabla
+        document.getElementById("downloadLink").addEventListener("click", function (event) {
+            event.preventDefault();
+        
+            const link = document.createElement("a");
+            link.href = this.href;
+            link.download = "shortened_urls.txt"; // ⚡ Asegurar que se descargue con el nombre correcto
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        
+            // ✅ Actualizar la tabla después de descargar
+            fetch("/dashboard/user/")  // 🔄 Recargar datos desde la vista de usuario
+            .then(response => response.text())
+            .then(html => {
+                let parser = new DOMParser();
+                let doc = parser.parseFromString(html, "text/html");
+                let newTableBody = doc.getElementById("urls-table").innerHTML;
+                document.getElementById("urls-table").innerHTML = newTableBody;
+                showNotification("success", "Tabla actualizada después de la descarga");
+            });
+        });
+        
+        // ✅ Función para copiar la URL al portapapeles
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification("success", "¡URL copiada!");
+            });
+        }
+        
+        // ✅ Función para confirmar y eliminar URL
+        function confirmDeleteUrl(urlId) {
+            let confirmBox = document.createElement("div");
+            confirmBox.innerHTML = `
+                <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                    <div class="bg-gray-800 p-6 rounded-lg shadow-lg text-center">
+                        <p class="text-white mb-4">¿Estás seguro de que deseas eliminar esta URL?</p>
+                        <button onclick="deleteUrl(${urlId})" class="px-4 py-2 bg-red-500 rounded-lg text-white hover:bg-red-700">
+                            Eliminar
+                        </button>
+                        <button onclick="this.parentElement.parentElement.remove()" class="ml-2 px-4 py-2 bg-gray-600 rounded-lg text-white hover:bg-gray-800">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>`;
+            document.body.appendChild(confirmBox);
+        }
+        
+        // ✅ Función para eliminar una URL de la tabla sin recargar
+        function deleteUrl(urlId) {
+            fetch(`/urls/delete/${urlId}/`, {
+                method: "DELETE",
+                headers: { "X-CSRFToken": "{{ csrf_token }}" }
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById(`url-row-${urlId}`).remove();
+                    showNotification("success", "URL eliminada correctamente");
+                } else {
+                    showNotification("error", "No se pudo eliminar la URL");
+                }
+            });
+        
+            document.querySelector(".fixed").remove(); // Cierra el modal de confirmación
+        }
+        
+        // ✅ Función para mostrar notificaciones de éxito/error
+        function showNotification(type, message) {
+            let toast = document.createElement("div");
+            toast.innerHTML = message;
+            toast.classList.add("fixed", "bottom-4", "right-4", "p-3", "rounded-lg", "text-white", type === "success" ? "bg-green-500" : "bg-red-500");
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+    </script>
+</body>
+</html>

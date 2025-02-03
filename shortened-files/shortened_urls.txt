@@ -1,0 +1,10 @@
+https://www.google.com -> http://127.0.0.1:8000/r/qVOXN3 -> http://127.0.0.1:8000/r/JLpa2G
+https://www.github.com -> http://127.0.0.1:8000/r/xNQzhW -> http://127.0.0.1:8000/r/FCqZkf
+https://www.stackoverflow.com -> http://127.0.0.1:8000/r/zM2BrH -> http://127.0.0.1:8000/r/6WbOr4
+https://www.python.org -> http://127.0.0.1:8000/r/WxJBPj -> http://127.0.0.1:8000/r/tvAs0r
+https://www.djangoproject.com -> http://127.0.0.1:8000/r/voHfJe -> http://127.0.0.1:8000/r/wlxyc2
+https://www.wikipedia.org -> http://127.0.0.1:8000/r/DUbtca -> http://127.0.0.1:8000/r/6MqpO4
+https://www.reddit.com -> http://127.0.0.1:8000/r/OydSzW -> http://127.0.0.1:8000/r/fTehji
+https://www.medium.com -> http://127.0.0.1:8000/r/QIKKVR -> http://127.0.0.1:8000/r/qMxaDT
+https://www.nytimes.com -> http://127.0.0.1:8000/r/XCwjbI -> http://127.0.0.1:8000/r/qsW6Hq
+https://www.bbc.com -> http://127.0.0.1:8000/r/ugspCi -> http://127.0.0.1:8000/r/3fxnkw

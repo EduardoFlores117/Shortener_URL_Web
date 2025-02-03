@@ -1,0 +1,10 @@
+https://www.google.com -> http://127.0.0.1:8000/r/qVOXN3
+https://www.github.com -> http://127.0.0.1:8000/r/xNQzhW
+https://www.stackoverflow.com -> http://127.0.0.1:8000/r/zM2BrH
+https://www.python.org -> http://127.0.0.1:8000/r/WxJBPj
+https://www.djangoproject.com -> http://127.0.0.1:8000/r/voHfJe
+https://www.wikipedia.org -> http://127.0.0.1:8000/r/DUbtca
+https://www.reddit.com -> http://127.0.0.1:8000/r/OydSzW
+https://www.medium.com -> http://127.0.0.1:8000/r/QIKKVR
+https://www.nytimes.com -> http://127.0.0.1:8000/r/XCwjbI
+https://www.bbc.com -> http://127.0.0.1:8000/r/ugspCi

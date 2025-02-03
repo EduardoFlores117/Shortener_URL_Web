@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+    <div class="container mx-auto p-6 relative">
+        <!-- Barra superior -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-blue-400">Admin Dashboard</h1>
+
+            <!-- Sección del usuario -->
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <span class="bg-gray-700 p-2 rounded-full text-white">👤</span>
+                    <span class="text-white">{{ request.user.email }}</span>
+                </div>
+                <a href="/auth/logout/" class="px-4 py-2 bg-red-500 rounded-lg text-white hover:bg-red-700">
+                    Cerrar Sesión
+                </a>
+            </div>
+        </div>
+
+        <!-- Filtro de usuario -->
+        <div class="mb-4 p-4 bg-gray-800 rounded-lg shadow-md">
+            <label for="userFilter" class="block text-gray-300">Filtrar por usuario:</label>
+            <select id="userFilter" class="w-full p-2 bg-gray-700 text-white rounded-lg">
+                <option value="all">Todos los usuarios</option>
+                {% for user in users %}
+                <option value="{{ user.id }}" {% if user.id|stringformat:"s" == selected_user_id %}selected{% endif %}>
+                    {{ user.username }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Tabla de URLs -->
+        <div class="mt-4 p-4 bg-gray-800 rounded-lg shadow-md">
+            <table class="w-full border-collapse rounded-lg overflow-hidden">
+                <thead>
+                    <tr class="bg-gray-700 text-white text-left">
+                        <th class="p-3">ID</th>
+                        <th class="p-3">URL Original</th>
+                        <th class="p-3">URL Acortada</th>
+                        <th class="p-3">Visitas</th>
+                        <th class="p-3">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="urls-table">
+                    {% for url in page_obj %}
+                    <tr class="border-b border-gray-600 hover:bg-gray-700">
+                        <td class="p-3">{{ url.id }}</td>
+                        <td class="p-3 truncate max-w-xs">{{ url.original_url }}</td>
+                        <td class="p-3">
+                            <a href="{{ url.get_short_url }}" target="_blank" class="text-blue-400 hover:underline">{{ url.get_short_url }}</a>
+                        </td>
+                        <td class="p-3">{{ url.views }}</td>
+                        <td class="p-3 flex space-x-2">
+                            <button onclick="copyToClipboard('{{ url.get_short_url }}')" class="text-gray-300 hover:text-white">📋</button>
+                            <button onclick="confirmDeleteUrl({{ url.id }})" class="text-red-500 hover:text-red-700">🗑️</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        <div id="pagination-controls" class="flex items-center justify-between mt-4">
+            <button id="prevPage" class="px-4 py-2 bg-blue-500 rounded-lg text-white hover:bg-blue-700">⬅️ Anterior</button>
+            <span class="text-gray-300 text-lg font-semibold">Página <span id="currentPage">1</span></span>
+            <button id="nextPage" class="px-4 py-2 bg-blue-500 rounded-lg text-white hover:bg-blue-700">Siguiente ➡️</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("userFilter").addEventListener("change", function () {
+            loadTableData(1);
+        });
+
+        document.getElementById("prevPage").addEventListener("click", function () {
+            let currentPage = parseInt(document.getElementById("currentPage").textContent);
+            if (currentPage > 1) loadTableData(currentPage - 1);
+        });
+
+        document.getElementById("nextPage").addEventListener("click", function () {
+            let currentPage = parseInt(document.getElementById("currentPage").textContent);
+            loadTableData(currentPage + 1);
+        });
+
+        function loadTableData(page) {
+            let userId = document.getElementById("userFilter").value;
+            fetch(`/dashboard/admin/?user_id=${userId}&page=${page}`, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+                .then(response => response.json())
+                .then(data => {
+                    let tableBody = document.getElementById("urls-table");
+                    tableBody.innerHTML = "";
+                    
+                    data.urls.forEach(url => {
+                        let newRow = `<tr class="border-b border-gray-600 hover:bg-gray-700">
+                            <td class="p-3">${url.id}</td>
+                            <td class="p-3 truncate max-w-xs">${url.original_url}</td>
+                            <td class="p-3">
+                                <a href="${url.short_url}" target="_blank" class="text-blue-400 hover:underline">${url.short_url}</a>
+                            </td>
+                            <td class="p-3">${url.views}</td>
+                            <td class="p-3 flex space-x-2">
+                                <button onclick="copyToClipboard('${url.short_url}')" class="text-gray-300 hover:text-white">📋</button>
+                                <button onclick="confirmDeleteUrl(${url.id})" class="text-red-500 hover:text-red-700">🗑️</button>
+                            </td>
+                        </tr>`;
+                        tableBody.innerHTML += newRow;
+                    });
+
+                    document.getElementById("currentPage").textContent = data.pagination.current_page;
+                });
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("¡URL copiada!");
+            });
+        }
+
+        function confirmDeleteUrl(urlId) {
+            let confirmBox = confirm("¿Seguro que quieres eliminar esta URL?");
+            if (confirmBox) deleteUrl(urlId);
+        }
+
+        function deleteUrl(urlId) {
+            fetch(`/urls/delete/${urlId}/`, {
+                method: "DELETE",
+                headers: { "X-CSRFToken": "{{ csrf_token }}" }
+            })
+            .then(response => {
+                if (response.ok) {
+                    loadTableData(1);
+                    alert("URL eliminada correctamente");
+                } else {
+                    alert("Error al eliminar la URL");
+                }
+            });
+        }
+
+        loadTableData(1);
+    </script>
+</body>
+</html>
